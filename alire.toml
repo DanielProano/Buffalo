@@ -3,9 +3,9 @@ description = "Secure Bootloader for STM32F4"
 version = "0.1.0-dev"
 
 authors = ["Danny"]
-maintainers = ["Danny <example@example.com>"]
+maintainers = ["Danny <daniel.proano@yahoo.com>"]
 licenses = "GPL-3.0-or-later"
 website = "dannyproano.com"
-tags = ["secure", "bootloader", "buffalo", "autonomous", "drone", "stm32"]
+tags = ["secure", "bootloader", "buffalo", "autonomous", "drone", "stm32f4"]
 
 executables = ["buffalo"]

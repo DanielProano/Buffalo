@@ -11,7 +11,5 @@ tags = ["secure", "bootloader", "buffalo", "autonomous", "drone", "stm32f4"]
 project-files = ["buffalo.gpr"]
 executables = ["buffalo"]
 
-[[
-depends-on
-]]
-gnat_arm_elf = "15^"
+[[depends-on]]
+gnat_arm_elf = "^15"

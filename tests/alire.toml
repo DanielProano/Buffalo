@@ -1,0 +1,13 @@
+name = "buffalo_tests"
+description = "Unit tests for Buffalo bootloader"
+version = "0.1.0-dev"
+authors = ["Daniel Proano"]
+maintainers = ["Daniel Proano <daniel.proano@yahoo.com>"]
+licenses = "GPL-3.0-or-later"
+executables = ["test_runner"]
+
+[[depends-on]]
+gnat_native = "*"
+
+[[depends-on]]
+aunit = "*"

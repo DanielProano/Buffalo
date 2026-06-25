@@ -1,7 +1,8 @@
 with "config/buffalo_config.gpr";
 project Buffalo is
-
-   for Source_Dirs use ("src/", "config/");
+   for Target use "arm-eabi";
+   for Runtime ("Ada") use "light-cortex-m4f";
+   for Source_Dirs use ("src/", "src/bindings", "src/bootloader", "src/crypto", "src/hal", "src/hal/stm32", "config/");
    for Object_Dir use "obj/" & Buffalo_Config.Build_Profile;
    for Create_Missing_Dirs use "True";
    for Exec_Dir use "bin";

@@ -1,6 +1,8 @@
+/* Claiming Sector 0 & 1 for Bootloader */
+/* Page 45 https://www.st.com/resource/en/reference_manual/dm00096844-stm32f401xb-c-and-stm32f401xd-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf */
 MEMORY
 {
-    flash   (RX) : ORIGIN = 0x08000000, LENGTH = 256K
+    flash   (RX) : ORIGIN = 0x08000000, LENGTH = 32K
     sram    (RW) : ORIGIN = 0x20000000, LENGTH = 64K
 }
 

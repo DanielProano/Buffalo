@@ -8,9 +8,13 @@ project Buffalo is
    for Runtime ("Ada") use "light-cortex-m4f";
    for Source_Dirs use (
       "src/", 
+      "src/bindings/",
       "src/bindings/src", 
+      "src/bootloader/",
       "src/bootloader/src", 
+      "src/crypto/",
       "src/crypto/src", 
+      "src/hal/",
       "src/hal/src", 
       "src/hal/stm32", 
       "config/", 

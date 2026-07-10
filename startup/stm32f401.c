@@ -1,6 +1,6 @@
 /* Includes */
 #include <stdint.h>
-#include "fault_indicator.h"
+#include "fault_impl.h"
 
 /* Globals */
 

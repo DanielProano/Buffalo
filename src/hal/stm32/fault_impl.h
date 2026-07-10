@@ -1,0 +1,10 @@
+#ifndef FAULT_INDICATOR_H
+#define FAULT_INDICATOR_H
+
+#include <stdint.h>
+
+void delay(volatile uint32_t count);
+void warning_light(void);
+void warning_light_scheduler(void);
+
+#endif

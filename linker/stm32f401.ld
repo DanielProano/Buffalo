@@ -1,5 +1,3 @@
-/* Claiming Sector 0 & 1 for Bootloader */
-/* Page 45 https://www.st.com/resource/en/reference_manual/dm00096844-stm32f401xb-c-and-stm32f401xd-e-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf */
 MEMORY
 {
     flash   (RX) : ORIGIN = 0x08000000, LENGTH = 32K
@@ -32,14 +30,6 @@ SECTIONS
         _text_end = .;
     } > flash
 
-    /* Note, .data represents initialized globals
-    & variables that can otherwise change
-    but when we flash stm32, we can only flash
-    flash-memory. Therefore, next best option is
-    flash .data and then tell startup code with
-    "> sram AT" to copy them into sram
-    */
-
     .data : ALIGN(4)
     {
         _data_start = .;
@@ -50,14 +40,6 @@ SECTIONS
     } > sram AT > flash
 
     _data_flash_start = LOADADDR(.data);
-
-    /* 
-    Reason why we can do "> sram"
-    here is because linker is bss
-    does not have data to write,
-    only needs to reserve space
-    and record start and end
-    */
 
     .bss : ALIGN(4) 
     {

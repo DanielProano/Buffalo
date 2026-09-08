@@ -19,6 +19,7 @@ project Buffalo is
       "src/hal/stm32", 
       "config/", 
       "lib/monocypher/",
+      "Dragonfly_Protocol/",
       "startup/"
    );
    for Object_Dir use "obj/" & Buffalo_Config.Build_Profile;

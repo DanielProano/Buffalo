@@ -1,7 +1,10 @@
 -- use unsigned 8/16/32 bit Ada types
 with Interfaces; use Interfaces;
 
-package Protocol is
+package Protocol
+  with SPARK_Mode => On,
+       Abstract_State => Crc_Table_State
+is
 
    --  Sourced from protocol.h via protocol_shim.c
    Start_Byte : constant Unsigned_8
@@ -10,14 +13,6 @@ package Protocol is
    Wire_Version : constant Unsigned_8
      with Import, Convention => C, External_Name => "protocol_version_value";
 
-   --  Fixes the wire frame's payload capacity -- part of the FRAME layout
-   --  itself (sizes Payload_Bytes/Frame below), so it has to stay a static
-   --  literal rather than an imported runtime value: Byte_Array's bound
-   --  and the 'Size checks further down both require a static expression,
-   --  which an imported object (even a `const` one) is not, in Ada.
-   --  protocol_shim.c's payload_max_size exposes the true C value so a
-   --  test can cross-check this literal against it -- same pattern as
-   --  Msg_Id/Bootloader_Cmd/Error_Code's representation clauses.
    Payload_Max_Size : constant := 128;
 
    type Byte_Array is array (Natural range <>) of Unsigned_8
@@ -125,28 +120,55 @@ package Protocol is
      with Convention => C, Pack, Size => (4 + 4 + 4 + 1 + 1) * 8;
 
    procedure Compute_Crc16_Table
-     with Import, Convention => C, External_Name => "compute_crc16_table";
+     with Import, Convention => C, External_Name => "compute_crc16_table",
+          Global => (Output => Crc_Table_State);
 
    function Compute_Crc16
      (Buffer      : Byte_Array;
       Buffer_Len  : Unsigned_32) return Unsigned_16
-     with Import, Convention => C, External_Name => "compute_crc16";
+     with Import, Convention => C, External_Name => "compute_crc16",
+          Global => (Input => Crc_Table_State);
 
-   --  Returns the encoded length in bytes, or a negative value on failure
-   --  (buffer too small), matching protocol_frame_encode()'s int result.
-   function Frame_Encode
+   --  Length gets the encoded byte count, or a negative value on failure
+   --  (buffer too small) -- protocol_frame_encode()'s C int result,
+   --  moved into an out parameter because a SPARK function can't have an
+   --  out parameter (Buffer) *and* a return value; see the private part
+   --  of this package for why. Global => Input Crc_Table_State because
+   --  protocol_frame_encode() calls compute_crc16() internally -- easy to
+   --  miss since nothing in this signature mentions CRCs at all.
+   procedure Frame_Encode
+     (Buffer   : out Byte_Array;
+      Buf_Size : Unsigned_32;
+      Source   : Frame;
+      Length   : out Integer)
+     with Global => (Input => Crc_Table_State);
+
+   --  Length gets the decoded byte count, or a negative value on failure
+   --  (short buffer, bad start byte, oversize payload, CRC mismatch) --
+   --  protocol_frame_decode()'s C int result, same out-parameter reason
+   --  as Frame_Encode. Same hidden Crc_Table_State dependency too, via
+   --  the internal compute_crc16() call.
+   procedure Frame_Decode
+     (Decoded  : out Frame;
+      Buffer   : Byte_Array;
+      Buf_Size : Unsigned_32;
+      Length   : out Integer)
+     with Global => (Input => Crc_Table_State);
+
+private
+
+   function Frame_Encode_Raw
      (Buffer   : out Byte_Array;
       Buf_Size : Unsigned_32;
       Source   : Frame) return Integer
-     with Import, Convention => C, External_Name => "protocol_frame_encode";
+     with Import, Convention => C, External_Name => "protocol_frame_encode",
+          SPARK_Mode => Off;
 
-   --  Returns the decoded length in bytes, or a negative value on failure
-   --  (short buffer, bad start byte, oversize payload, CRC mismatch),
-   --  matching protocol_frame_decode()'s int result.
-   function Frame_Decode
+   function Frame_Decode_Raw
      (Decoded  : out Frame;
       Buffer   : Byte_Array;
       Buf_Size : Unsigned_32) return Integer
-     with Import, Convention => C, External_Name => "protocol_frame_decode";
+     with Import, Convention => C, External_Name => "protocol_frame_decode",
+          SPARK_Mode => Off;
 
 end Protocol;

@@ -2,11 +2,13 @@ with Ada.Text_IO;
 with Ada.Command_Line;
 with Interfaces;
 with Protocol;
+with Flash;
 
 use Ada.Text_IO;
 use Ada.Command_Line;
 use Interfaces;
 use Protocol;
+use Flash;
 
 procedure Test_Runner is
     -- Natural means integer >= 0
@@ -164,7 +166,7 @@ procedure Test_Runner is
 
         Compute_Crc16_Table;
 
-        Encoded_Len := Frame_Encode (Buffer, Wire_Buf_Size, Src);
+        Frame_Encode (Buffer, Wire_Buf_Size, Src, Encoded_Len);
         Check (Encoded_Len = 5 + Integer (Src.Payload_Len) + 2,
                "Frame_Encode returns header+payload+crc length");
 
@@ -174,9 +176,9 @@ procedure Test_Runner is
         end if;
 
         declare
-            Decoded_Len : constant Integer :=
-              Frame_Decode (Decoded, Buffer, Unsigned_32 (Encoded_Len));
+            Decoded_Len : Integer;
         begin
+            Frame_Decode (Decoded, Buffer, Unsigned_32 (Encoded_Len), Decoded_Len);
             Check (Decoded_Len = Encoded_Len,
                    "Frame_Decode returns the same length Frame_Encode produced");
             Check (Decoded.Start_Byte = Src.Start_Byte, "decoded Start_Byte round-trips");
@@ -192,9 +194,55 @@ procedure Test_Runner is
         --  version/message_id/sequence/payload_len/payload, so this must
         --  be caught.
         Buffer (5) := Buffer (5) xor 16#FF#;
-        Check (Frame_Decode (Decoded, Buffer, Unsigned_32 (Encoded_Len)) < 0,
-               "Frame_Decode rejects a tampered payload byte (CRC mismatch)");
+        declare
+            Tamper_Len : Integer;
+        begin
+            Frame_Decode (Decoded, Buffer, Unsigned_32 (Encoded_Len), Tamper_Len);
+            Check (Tamper_Len < 0,
+                   "Frame_Decode rejects a tampered payload byte (CRC mismatch)");
+        end;
     end Check_Frame_Round_Trip;
+
+    --  Exercises the host Flash mock: sector-boundary math (shared code,
+    --  same for both backends), the lock-check guard, and the AND-only
+    --  write semantics real NOR flash has (can clear bits, never set
+    --  them -- proving erase is genuinely required before a rewrite).
+    procedure Check_Flash is
+        Result : Status;
+        Addr0  : constant Unsigned_32 := Flash_Base;
+    begin
+        Check (Address_To_Sector (Flash_Base) = 0, "sector 0 starts at Flash_Base");
+        Check (Address_To_Sector (Flash_Base + 16#3FFF#) = 0, "sector 0 ends at +0x3FFF");
+        Check (Address_To_Sector (Flash_Base + 16#4000#) = 1, "sector 1 starts at +0x4000");
+        Check (Address_To_Sector (Flash_Base + 16#1_FFFF#) = 4, "sector 4 ends at +0x1FFFF");
+        Check (Address_To_Sector (Flash_Base + 16#2_0000#) = 5, "sector 5 starts at +0x20000");
+        Check (Address_To_Sector (Flash_End) = 5, "sector 5 covers Flash_End");
+
+        Lock;
+        Write_Word (Addr0, 16#DEAD_BEEF#, Result);
+        Check (Result = Locked, "Write_Word rejected while locked");
+
+        Erase_Sector (0, Result);
+        Check (Result = Locked, "Erase_Sector rejected while locked");
+
+        Unlock;
+
+        Erase_Sector (0, Result);
+        Check (Result = Ok, "Erase_Sector succeeds when unlocked");
+        Check (Read_Word (Addr0) = 16#FFFF_FFFF#, "erased word reads back as all 1s");
+
+        Write_Word (Addr0, 16#0000_00F0#, Result);
+        Check (Result = Ok, "Write_Word succeeds when unlocked");
+        Check (Read_Word (Addr0) = 16#0000_00F0#, "written word reads back correctly");
+
+        Write_Word (Addr0, 16#FFFF_FFFF#, Result);
+        Check (Result = Ok and Read_Word (Addr0) = 16#0000_00F0#,
+               "Write_Word can't set bits without erasing first (AND semantics)");
+
+        Lock;
+        Write_Word (Addr0, 16#1#, Result);
+        Check (Result = Locked, "Lock re-engages write protection");
+    end Check_Flash;
 
 begin
     Put_Line ("Running Buffalo tests...");
@@ -204,6 +252,7 @@ begin
     Check_Error_Code_Matches_C;
     Check_Payload_Max_Size_Matches_C;
     Check_Frame_Round_Trip;
+    Check_Flash;
 
     New_Line;
     if Failures = 0 then 

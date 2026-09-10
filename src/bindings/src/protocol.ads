@@ -129,13 +129,6 @@ is
      with Import, Convention => C, External_Name => "compute_crc16",
           Global => (Input => Crc_Table_State);
 
-   --  Length gets the encoded byte count, or a negative value on failure
-   --  (buffer too small) -- protocol_frame_encode()'s C int result,
-   --  moved into an out parameter because a SPARK function can't have an
-   --  out parameter (Buffer) *and* a return value; see the private part
-   --  of this package for why. Global => Input Crc_Table_State because
-   --  protocol_frame_encode() calls compute_crc16() internally -- easy to
-   --  miss since nothing in this signature mentions CRCs at all.
    procedure Frame_Encode
      (Buffer   : out Byte_Array;
       Buf_Size : Unsigned_32;
@@ -143,11 +136,6 @@ is
       Length   : out Integer)
      with Global => (Input => Crc_Table_State);
 
-   --  Length gets the decoded byte count, or a negative value on failure
-   --  (short buffer, bad start byte, oversize payload, CRC mismatch) --
-   --  protocol_frame_decode()'s C int result, same out-parameter reason
-   --  as Frame_Encode. Same hidden Crc_Table_State dependency too, via
-   --  the internal compute_crc16() call.
    procedure Frame_Decode
      (Decoded  : out Frame;
       Buffer   : Byte_Array;
